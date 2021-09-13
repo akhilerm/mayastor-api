@@ -7,8 +7,57 @@ syntax = "proto3";
 
 package mayastor.v1;
 
+// Service for managing storage pools, replicas and nexus's.
+// Replica holds the actual user data. From user application the
+// data are accessed indirectly through nexus object.
+service Mayastor {
+  // Storage pool related methods.
+  //
+  // Storage pool is made up of block devices disks and provides a storage
+  // space for thin provisioning of replicas.
+
+  rpc CreatePool (CreatePoolRequest) returns (Pool) {}
+  rpc DestroyPool (DestroyPoolRequest) returns (Null) {}
+  rpc ListPools (Null) returns (ListPoolsReply) {}
+
+}
+
 // Means no arguments or no return value.
 message Null {}
+
+// Create pool arguments.
+// Currently we support only concatenation of disks (RAID-0).
+message CreatePoolRequest {
+  string name = 1;           // name of the pool
+  repeated string disks = 2; // disk device paths or URIs to be claimed by the pool
+}
+
+// State of the storage pool (terminology comes from ZFS).
+enum PoolState {
+  POOL_UNKNOWN = 0;
+  POOL_ONLINE = 1;   // the pool is in normal working order
+  POOL_DEGRADED = 2; // the pool has experienced a failure but can still function
+  POOL_FAULTED = 3;  // the pool is completely inaccessible
+}
+
+// Storage pool properties
+message Pool {
+  string name = 1;            // name of the pool
+  repeated string disks = 2;  // absolute disk paths claimed by the pool
+  PoolState state = 3;        // current state of the pool
+  uint64 capacity = 5;        // size of the pool in bytes
+  uint64 used = 6;            // used bytes from the pool
+}
+
+// Destroy pool arguments.
+message DestroyPoolRequest {
+  string name = 1;  // name of the pool
+}
+
+// List of pools and their properties.
+message ListPoolsReply {
+  repeated Pool pools = 1;  // list of the pools
+}
 
 // Anything what follows here are private interfaces used for interacting with
 // mayastor outside the scope of CSI.
