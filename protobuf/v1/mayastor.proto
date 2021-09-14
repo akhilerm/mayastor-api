@@ -20,6 +20,17 @@ service Mayastor {
   rpc DestroyPool (DestroyPoolRequest) returns (Null) {}
   rpc ListPools (Null) returns (ListPoolsReply) {}
 
+  // Replica related methods.
+  //
+  // Replica allocates space from storage pool.
+
+  rpc CreateReplica (CreateReplicaRequest) returns (Replica) {}
+
+  rpc DestroyReplica (DestroyReplicaRequest) returns (Null) {}
+  rpc ListReplicas (Null) returns (ListReplicasReply) {}
+
+  rpc StatReplicas (Null) returns (StatReplicasReply) {}
+  rpc ShareReplica (ShareReplicaRequest) returns (ShareReplicaReply) {}
 }
 
 // Means no arguments or no return value.
@@ -57,6 +68,79 @@ message DestroyPoolRequest {
 // List of pools and their properties.
 message ListPoolsReply {
   repeated Pool pools = 1;  // list of the pools
+}
+
+// Protocol for remote storage access which exposes a replica.
+enum ShareProtocolReplica {
+  REPLICA_NONE = 0;   // not exposed
+  REPLICA_NVMF = 1;   // NVMe over Fabrics (TCP)
+  REPLICA_ISCSI = 2;  // iSCSI
+}
+
+// Create replica arguments.
+message CreateReplicaRequest {
+  string uuid = 1;  // uuid of the replica
+  string pool = 2;  // name of the pool
+  uint64 size = 3;  // size of the replica in bytes
+  bool thin = 4;    // thin provisioning
+  ShareProtocolReplica share = 5;  // protocol to expose the replica over
+}
+
+
+// Destroy replica arguments.
+message DestroyReplicaRequest {
+  string uuid = 1;  // name of the replica
+}
+
+// Replica properties
+message Replica {
+  string uuid = 1;  // uuid of the replica
+  string pool = 2;  // name of the pool
+  bool thin = 3;    // thin provisioning
+  uint64 size = 4;  // size of the replica in bytes
+  ShareProtocolReplica share = 5;  // protocol used for exposing the replica
+  string uri = 6;   // uri usable by nexus to access it
+}
+
+// List of replicas and their properties.
+message ListReplicasReply {
+  repeated Replica replicas = 1;  // list of the replicas
+}
+
+
+
+// NOTE: We use struct instead of more suitable map type, because JS protobuf
+// lib has problem (yields garbage) when decoding maps containing u64:
+// https://github.com/protobufjs/protobuf.js/issues/1203
+message Stats {
+  uint64 num_read_ops = 1;
+  uint64 num_write_ops = 2;
+  uint64 bytes_read = 3;
+  uint64 bytes_written = 4;
+}
+
+// Replica stats
+message ReplicaStats {
+  string uuid = 1;  // uuid of the replica
+  string pool = 2;  // name of the pool
+  Stats stats = 3;  // stat counters
+}
+
+// List of replicas and their properties.
+message StatReplicasReply {
+  repeated ReplicaStats replicas = 1;  // list of the replicas
+}
+
+// Share replica request.
+message ShareReplicaRequest {
+  string uuid = 1;  // uuid of the replica
+  ShareProtocolReplica share = 2;  // protocol used for exposing the replica
+  // Use "NONE" to disable remote access.
+}
+
+// Share replica response.
+message ShareReplicaReply {
+  string uri = 1;   // uri under which the replica is accessible by nexus
 }
 
 // Anything what follows here are private interfaces used for interacting with
