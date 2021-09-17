@@ -31,6 +31,10 @@ service Mayastor {
 
   rpc StatReplicas (Null) returns (StatReplicasReply) {}
   rpc ShareReplica (ShareReplicaRequest) returns (ShareReplicaReply) {}
+
+  // NVMe controllers
+  rpc ListNvmeControllers (Null) returns (ListNvmeControllersReply) {}
+  rpc StatNvmeControllers (Null) returns (StatNvmeControllersReply) {}
 }
 
 // Means no arguments or no return value.
@@ -142,6 +146,45 @@ message ShareReplicaRequest {
 message ShareReplicaReply {
   string uri = 1;   // uri under which the replica is accessible by nexus
 }
+
+enum NvmeControllerState {
+  NEW = 0;
+  INITIALIZING = 1;
+  RUNNING = 2;
+  FAULTED = 3;
+  UNCONFIGURING = 4;
+  UNCONFIGURED = 5;
+}
+
+message NvmeController {
+  string name = 1;               // NVMe controller name
+  NvmeControllerState state = 2; // Current state of the NVMe controller
+  uint64 size = 3;               // Size of the controller's namespace (0 if no namespace attached).
+  uint32 blk_size = 4;           // Block size of the namespace (0 if no namespace attached).
+}
+
+message ListNvmeControllersReply {
+  repeated NvmeController controllers = 1;
+}
+
+message NvmeControllerIoStats {
+  uint64 num_read_ops = 1;
+  uint64 num_write_ops = 2;
+  uint64 bytes_read = 3;
+  uint64 bytes_written = 4;
+  uint64 num_unmap_ops = 5;
+  uint64 bytes_unmapped = 6;
+}
+
+message NvmeControllerStats {
+  string name = 1;                 // NVMe controller name
+  NvmeControllerIoStats stats = 2; // Controller I/O statistics
+}
+
+message StatNvmeControllersReply {
+  repeated NvmeControllerStats controllers = 1;
+}
+
 
 // Anything what follows here are private interfaces used for interacting with
 // mayastor outside the scope of CSI.
