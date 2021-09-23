@@ -31,6 +31,26 @@ service Mayastor {
 
   rpc StatReplicas (Null) returns (StatReplicasReply) {}
   rpc ShareReplica (ShareReplicaRequest) returns (ShareReplicaReply) {}
+
+  // Nexus related methods.
+  //
+  // Nexus is a logical frontend representing a data volume taking care of
+  // replication and rebuild in the background.
+
+  rpc CreateNexus (CreateNexusRequest) returns (Nexus) {}
+  rpc DestroyNexus (DestroyNexusRequest) returns (Null) {}
+  rpc ListNexus (Null) returns (ListNexusReply) {}
+  rpc AddChildNexus (AddChildNexusRequest) returns (Child) {}
+  rpc RemoveChildNexus (RemoveChildNexusRequest) returns (Null) {}
+  rpc FaultNexusChild (FaultNexusChildRequest) returns (Null) {}
+
+  // This method is called by control plane to construct a block device
+  // (/dev/...) that will be used to connect the nexus to the OS.
+  rpc PublishNexus (PublishNexusRequest) returns (PublishNexusReply) {}
+  rpc UnpublishNexus (UnpublishNexusRequest) returns (Null) {}
+
+  // Mayastor instance methods.
+  rpc GetMayastorInfo (Null) returns (MayastorInfoRequest) {}
 }
 
 // Means no arguments or no return value.
@@ -141,6 +161,108 @@ message ShareReplicaRequest {
 // Share replica response.
 message ShareReplicaReply {
   string uri = 1;   // uri under which the replica is accessible by nexus
+}
+
+// Note that enum values use C++ scoping rules, meaning that enum values are siblings of their type,
+// not children of it.
+// So cannot use NBD, NVMF, and ISCSI as symbols for ShareProtocolNexus
+enum ShareProtocolNexus {
+  NEXUS_NBD = 0;    // local
+  NEXUS_NVMF = 1;   // NVMe over Fabrics (TCP)
+  NEXUS_ISCSI = 2;  // iSCSI
+}
+
+// Create nexus arguments.
+message CreateNexusRequest {
+  string uuid = 1; // this UUID will be set in as the UUID
+  uint64 size = 2; // size of the device in bytes
+  // replica can be nvmf remote targets or a local spdk bdev
+  // (i.e. bdev:///name-of-the-bdev).
+  repeated string children = 3; // uris to the targets we connect to
+}
+
+// State of the nexus child.
+enum ChildState {
+  CHILD_UNKNOWN = 0;
+  CHILD_ONLINE = 1;   // healthy and contains the latest bits
+  CHILD_DEGRADED = 2; // rebuild is in progress (or other recoverable error)
+  CHILD_FAULTED = 3;  // unrecoverable error (control plane must act)
+}
+
+// represents a child device part of a nexus
+message Child {
+  string uri = 1;   // uri of the child device
+  ChildState state = 2; // state of the child
+  int32 rebuild_progress = 3;
+}
+
+// State of the nexus (terminology inspired by ZFS).
+enum NexusState {
+  NEXUS_UNKNOWN = 0;
+  NEXUS_ONLINE = 1;    // healthy and working
+  NEXUS_DEGRADED = 2;  // not healthy but is able to serve IO (i.e. rebuild is in progress)
+  NEXUS_FAULTED = 3;   // broken and unable to serve IO
+}
+
+// represents a nexus device
+message Nexus {
+  string uuid = 1;             // name of the nexus
+  uint64 size = 2;             // size of the volume in bytes
+  NexusState state = 3;        // current state of the nexus
+  repeated Child children = 4; // array of children
+  // URI of the device for the volume (missing if not published).
+  // Missing property and empty string are treated the same.
+  string device_uri = 5;
+  uint32 rebuilds = 6;         // total number of rebuild tasks
+}
+
+message ListNexusReply {
+  repeated Nexus nexus_list = 1;
+}
+
+message DestroyNexusRequest   {
+  string uuid = 1;    // uuid of the nexus
+}
+
+message AddChildNexusRequest {
+  string uuid = 1;    // uuid of the nexus
+  string uri = 2;     // URI of the child device to be added
+  bool norebuild = 3;   // auto start rebuilding
+}
+
+message RemoveChildNexusRequest {
+  string uuid = 1;    // uuid of the nexus
+  string uri = 2;     // URI of the child device to be removed
+}
+
+message FaultNexusChildRequest {
+  string uuid = 1;    // uuid of the nexus
+  string uri = 2;     // URI of the child device to be faulted
+}
+
+// this message will be subject to change as we will add support for remote
+// storage protocols.
+message PublishNexusRequest {
+  string uuid = 1; // uuid of the nexus which to create device for
+  string key = 2; // encryption key
+  ShareProtocolNexus share = 3;  // protocol used for the front end.
+}
+
+message PublishNexusReply {
+  string device_uri = 1; // i.e. file:///dev/nbd0
+}
+
+message UnpublishNexusRequest {
+  string uuid = 1;   // uuid of the nexus which to destroy
+}
+
+message MayastorFeatures {
+  bool asymmetricNamespaceAccess = 1;
+}
+
+message MayastorInfoRequest {
+  string version = 1;
+  MayastorFeatures supportedFeatures = 2;
 }
 
 // Anything what follows here are private interfaces used for interacting with
