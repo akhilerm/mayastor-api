@@ -58,11 +58,17 @@ message ListBdevResponse {
   repeated BdevResponse bdevs = 1;
 }
 
+enum ShareProtocolBdev {
+  NONE = 0;
+  NVMF = 1;   // NVMe over Fabrics (TCP)
+  ISCSI = 2;  // iSCSI
+}
+
 message ShareRequest {
   // name of the bdev to share
   string name = 1;
   // the protocol to use
-  string proto = 2;
+  ShareProtocolBdev protocol = 2;
 }
 
 message ShareResponse {
@@ -70,7 +76,7 @@ message ShareResponse {
 }
 
 message UnshareRequest {
-  // name of the bdev to share
+  // name of the bdev to unshare
   string name = 1;
 }
 
