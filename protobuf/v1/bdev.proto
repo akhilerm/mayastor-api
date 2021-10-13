@@ -14,9 +14,9 @@ service BdevRpc {
   // list the block devices
   rpc List(NullableString) returns (ListBdevResponse) {}
   // share the block device
-  rpc Share(ShareRequest) returns (ShareResponse) {}
+  rpc Share(BdevShareRequest) returns (BdevShareResponse) {}
   // unshare the block device
-  rpc Unshare(UnshareRequest) returns (google.protobuf.Empty) {}
+  rpc Unshare(BdevUnshareRequest) returns (google.protobuf.Empty) {}
 }
 
 message NullableString {
@@ -64,18 +64,18 @@ enum ShareProtocolBdev {
   ISCSI = 2;  // iSCSI
 }
 
-message ShareRequest {
+message BdevShareRequest {
   // name of the bdev to share
   string name = 1;
   // the protocol to use
   ShareProtocolBdev protocol = 2;
 }
 
-message ShareResponse {
+message BdevShareResponse {
   string uri = 1;
 }
 
-message UnshareRequest {
+message BdevUnshareRequest {
   // name of the bdev to unshare
   string name = 1;
 }
