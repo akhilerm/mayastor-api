@@ -3,6 +3,9 @@ syntax = "proto3";
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/empty.proto";
+import "common.proto";
+
+option go_package = "protobuf/v1";
 
 package mayastor.v1;
 
@@ -39,9 +42,7 @@ enum PoolState {
   POOL_FAULTED = 3;  // the pool is completely inaccessible
 }
 
-enum PoolType {
-  Lvs = 0;  // pool backed by spdk lvs
-}
+
 
 // Storage pool properties
 message Pool {

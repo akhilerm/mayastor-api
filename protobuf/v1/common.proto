@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package mayastor.v1;
+
+option go_package = "protobuf/v1";
+
+enum PoolType {
+  Lvs = 0;  // pool backed by spdk lvs
+}
+
+enum ShareProtocol {
+  NONE = 0; // not exposed
+  NVMF = 1; // NVMe over Fabrics (TCP)
+  ISCSI = 2; // iSCSI
+}
