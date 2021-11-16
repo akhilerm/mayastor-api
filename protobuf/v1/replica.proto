@@ -12,7 +12,7 @@ service ReplicaRpc {
   // Replica allocates space from storage pool.
   rpc CreateReplica (CreateReplicaRequest) returns (Replica) {}
   rpc DestroyReplica (DestroyReplicaRequest) returns (google.protobuf.Empty) {}
-  rpc ListReplicas (ListReplicaOptions) returns (ListReplicasResponse) {}
+  rpc ListReplicas (ListReplicaOptions) returns (ListReplicaResponse) {}
   rpc ShareReplica (ShareReplicaRequest) returns (ShareReplicaResponse) {}
 }
 
@@ -44,7 +44,7 @@ message Replica {
 }
 
 // List of replicas and their properties.
-message ListReplicasResponse {
+message ListReplicaResponse {
   repeated Replica replicas = 1;  // list of the replicas
 }
 
